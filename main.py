@@ -1,7 +1,13 @@
 import sys
 import torch
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
-from datasets import load_dataset
+
+def format_timestamp(seconds):
+    """Convert seconds to HH:MM:SS.mmm format."""
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    seconds = seconds % 60
+    return f"{hours:02}:{minutes:02}:{seconds:06.3f}"
 
 def main():
     if len(sys.argv) < 2:
@@ -33,11 +39,17 @@ def main():
         device=device,
     )
 
-    dataset = load_dataset("distil-whisper/librispeech_long", "clean", split="validation")
-    sample = dataset[0]["audio"]
-
     result = pipe(sys.argv[1])
-    print(result["text"])
+
+    # Process and print the chunks with timestamps
+    if "chunks" in result:
+        for chunk in result["chunks"]:
+            start_time = format_timestamp(chunk["timestamp"][0])
+            end_time = format_timestamp(chunk["timestamp"][1])
+            print(f"{start_time} --> {end_time}: {chunk['text']}")
+    else:
+        print("No chunks found or 'chunks' key missing.")
+        sys.exit(2)
 
 if __name__ == "__main__":
     main()
